@@ -1,0 +1,1 @@
+Copy the content of this folder to the "lua" folder of your luajit installation.
