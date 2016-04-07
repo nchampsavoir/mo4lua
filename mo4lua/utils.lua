@@ -63,4 +63,33 @@ function M.table_length(tbl)
   return count
 end
 
+local dictionnary_mt = {
+    __index = function (t, key) 
+        local dt = M.dictionnary()
+        t[key] = dt
+        return dt
+    end
+}
+
+--- Creates a table which default value is another table
+function M.dictionnary()
+    local t = {}
+    setmetatable(t, dictionnary_mt)
+    return t
+end
+
+local counter_mt = {
+    __index = function (t, key) 
+        t[key] = 0
+        return 0
+    end
+}
+
+--- Creates a table which default value is 0
+function M.counter()
+    local t = {}
+    setmetatable(t, counter_mt)
+    return t
+end
+
 return M

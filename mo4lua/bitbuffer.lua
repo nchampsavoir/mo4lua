@@ -1,6 +1,7 @@
 local ffi = require "ffi"
 local Buffer = require "3rdparty.buffer"
 
+local uint64 = ffi.typeof("uint64_t")
 local int16ptr = ffi.typeof("int16_t*")
 local uint16ptr = ffi.typeof("int16_t*")
 local int32ptr = ffi.typeof("int32_t*")
@@ -9,6 +10,10 @@ local int64ptr = ffi.typeof("int64_t*")
 local uint64ptr = ffi.typeof("uint64_t*")
 local floatptr = ffi.typeof("float*")
 local doubleptr = ffi.typeof("double*")
+
+local int32store = ffi.typeof("int32_t[1]")
+local uint32store = ffi.typeof("uint32_t[1]")
+local uint64store = ffi.typeof("uint64_t[1]")
 
 local function compliment8(value)
   return value < 0x80 and value or -0x100 + value
@@ -196,7 +201,7 @@ function Buffer:read_uint64LE(location_in_bits)
 end
 
 -- read binary data
-function Buffer:read_binary(location_in_bits, length_in_bits, dst)
+function Buffer:read_binary(location_in_bits, length_in_bits)
   local offset = bit.rshift(location_in_bits, 3)
   local length = bit.rshift(length_in_bits, 3)
   return ffi.string(self.tbuffer.data + offset, length)
@@ -216,4 +221,31 @@ function Buffer:read_double(location_in_bits)
   int64[0] = bit.bswap(int64[0])
   local d = ffi.cast(doubleptr, int64)
   return d[0] or 0
+end
+
+function Buffer:append_uint8(num)
+  self:append_char_right(bit.band(num, 0xFF))
+end
+
+function Buffer:append_uint16(num)
+  self:append_char_right(bit.rshift(num, 8))
+  self:append_char_right(bit.band(num, 0xFF))
+end
+
+function Buffer:append_int32(num)
+  local s = int32store()
+  s[0] = bit.bswap(num)
+  self:append_right(s, 4)
+end
+
+function Buffer:append_uint32(num)
+  local s = uint32store()
+  s[0] = bit.bswap(num)
+  self:append_right(s, 4)
+end
+
+function Buffer:append_uint64(uint64)
+  local s = uint64store()
+  s[0] = bit.bswap(uint64)
+  self:append_right(s, 8)
 end
