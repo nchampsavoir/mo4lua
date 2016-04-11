@@ -130,6 +130,10 @@ function Binding:start_brocker()
     zassert(self.broker_socket, err)
     print('Internal router bound to ' .. self.broker_uri)
 
+    self.sink = self.zmq_context:socket(zmq.PUB)
+    err = self.sink:connect("tcp://localhost:6677")
+    zassert(self.sink, err)
+
     self.loop = zloop.new(4, self.zmq_context)
 
     -- Process external point-to-point messages
@@ -180,8 +184,8 @@ function Binding:start_brocker()
     self.actors = {}
 
     -- Start all the registered actors in separate threads
-    for identity, code in pairs(self.mal_context.actors) do
-        local actor = self:start_actor(identity, code)
+    for identity, code_and_args in pairs(self.mal_context.actors) do
+        local actor = self:start_actor(identity, unpack(code_and_args))
         self.actors[identity] = actor
         self.loop:add_socket(actor, function(sock) 
             local signal = sock:recv()
@@ -192,6 +196,7 @@ function Binding:start_brocker()
     -- Start the broker loop. This call blocks until the loop
     -- is stopped by a command send from an actor
     self.loop:start()
+    
 end
 
 function get_text_for_signal(signal)
@@ -247,6 +252,7 @@ function Binding:stop()
     self.connections = {}
     self.subscriptions = {}
     self.loop:stop()
+    -- self.poller:stop()
     if self.verbose then print('Bye.') end
 end
 
@@ -256,11 +262,15 @@ function Binding:process_pubsub_message(identity, header, body)
 
     -- An internal provider publishes a message 
     if msg.interaction_stage == MAL_IP_STAGES.PUBSUB_PUBLISH then
-        print('Published message: ' .. body)
         -- Convert the publish message to a notify message 
         msg.interaction_stage = MAL_IP_STAGES.PUBSUB_NOTIFY
+        -- if msg.qos_level > 0 then
+        --     local credit = self.credits[msg.session][msg.area][msg.area_version][msg.service][msg.operation]
+        --     -- do something about credits
+        -- end
         header = self:serialize_mal_header(msg)
         self.mal_pub_socket:sendx(tostring(header), body)
+        -- self.sink:sendx(tostring(header), body)
 
     -- An internal consumer registers for a set of publications
     elseif msg.interaction_stage == MAL_IP_STAGES.PUBSUB_REGISTER then
@@ -410,8 +420,8 @@ function Binding:wait(poller, timeout)
 end
 
 --- Starts the actor in a separate thread
-function Binding:start_actor(identity, code)
-    local zmq_actor = zthreads.actor(self.zmq_context, function(pipe, code, identity, hostname, port)
+function Binding:start_actor(identity, code, args)
+    local zmq_actor = zthreads.actor(self.zmq_context, function(pipe, code, identity, hostname, port, args)
         local zloop = require "lzmq.loop"
         local mal = require "libmal"
         local malzmq = require "malzmq"
@@ -419,8 +429,17 @@ function Binding:start_actor(identity, code)
         local binding = malzmq(hostname, port)
         local SIGNALS = binding.SIGNALS
         local malctx = Context:new(binding)
-        local Actor = loadstring(code)()
-        local actor = Actor:new(malctx, identity)
+        
+        if code:sub(1,1) == "@" then
+            filename = code:sub(2)
+            local f = assert(loadfile(filename))
+            Actor = f()
+        else
+            local f = assert(loadstring(code))
+            Actor = f()
+        end
+
+        local actor = Actor:new(malctx, identity, args)
 
         local loop = zloop:new(2)
 
@@ -443,7 +462,9 @@ function Binding:start_actor(identity, code)
         end)
 
         loop:start()
-    end, code, identity, self.hostname, self.ptp_port)
+
+        actor:finalize()
+    end, code, identity, self.hostname, self.ptp_port, args)
 
     zmq_actor:start()
     return zmq_actor

@@ -4,8 +4,8 @@ local Decom = require "libdecom"
 
 local parser = argparse("acqd", "A telemetry acquisition daemon in lua")
 parser:argument("inputfile")
-parser:option("-c --control-port", "Control port number", "5555")
-parser:option("-p --publish-port", "Pubclish port number", "5557")
+parser:option("-c --control-port", "Control port number", "6666")
+parser:option("-p --publish-port", "Pubclish port number", "6667")
 parser:flag("-v --verbose")
 
 

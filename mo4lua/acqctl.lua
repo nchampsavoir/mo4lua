@@ -2,7 +2,7 @@ local zmq      = require "lzmq"
 local argparse = require "3rdparty.argparse"
 
 local parser = argparse("acqctl", "Command line interface to control the acquisition daemon")
-parser:option("-p --acqd-port", "Acqd control port number", "5555")
+parser:option("-p --acqd-port", "Acqd control port number", "6666")
 parser:command("go")
 
 local args = parser:parse()

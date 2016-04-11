@@ -7,9 +7,9 @@ local mp = require '3rdparty.MessagePack'
 local Decom = require "libdecom"
 
 local parser = argparse("decomd", "A telemetry decommutation daemon in lua")
-parser:option("-c --acqd-ctrl", "Acquisition Daemon control port number", "5555")
-parser:option("-s --acqd-subscribe", "Acquisition Daemon subscription port number", "5557")
-parser:option("-p --publish", "Publish port number", "5559")
+parser:option("-c --acqd-ctrl", "Acquisition Daemon control port number", "6666")
+parser:option("-s --acqd-subscribe", "Acquisition Daemon subscription port number", "6677")
+parser:option("-p --publish", "Publish port number", "6669")
 parser:flag("-v --verbose")
 parser:flag("-d --dump-headers", "Dump headers content")
 parser:flag("-u --pus-mode", "Read PUS secondary headers")

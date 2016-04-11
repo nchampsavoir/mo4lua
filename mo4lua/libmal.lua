@@ -120,6 +120,10 @@ function Endpoint:recv_message()
     return self.binding:recv_message(self)
 end
 
+function Endpoint:get_broker_uri()
+    return self.context:get_broker_uri()
+end
+
 local Poller = class('Poller')
 
 function Poller:initialize(context)
@@ -252,7 +256,7 @@ local SIGNALS = {
 -- An actor is basically a thread with a MAL endpoint
 local Actor = class('Actor', Endpoint)
 
-function Actor:initialize(context, identity)
+function Actor:initialize(context, identity, args)
     Endpoint.initialize(self, context, identity)
 
     -- handlers by AREA -> AREA VERSION -> SERVICE -> OPERATION
@@ -270,21 +274,25 @@ function Actor:initialize(context, identity)
     self.consumer_pubsub_handlers = dictionnary()
     self.broker_pubsub_handlers = dictionnary()
 
-    self:init()
+    self:init(args)
 end
 
-function Actor:init()
+function Actor:init(args)
     -- overload in child class
 end
 
 --- Hook called on every tick. Tick resolution is 
 -- a global configuration option of the context
-function Actor:on_tick()
+function Actor:handle_tick()
     -- overload in child class
 end
 
---- Handle signals comming from upstream
+--- Handle signals coming from upstream
 function Actor:handle_signal(signal)
+    -- overload in child class
+end
+
+function Actor:finalize()
     -- overload in child class
 end
 
@@ -431,8 +439,8 @@ function Context:create_poller()
     return self.binding:create_poller()    
 end
 
-function Context:add_actor(identity, code)
-    self.actors[identity] = code
+function Context:add_actor(identity, code, args)
+    self.actors[identity] = {code, args}
 end
 
 function Context:handle_command(command)
